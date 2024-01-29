@@ -4,5 +4,7 @@ projeto/
 │   ├── auth/
 │   │   ├── __init__.py
 │   │   └── authenticate.py
-│   ├── .env
+│   └── queue/
+│       ├── __init__.py
+│       └── listing.py
 └── main.py

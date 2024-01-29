@@ -3,7 +3,6 @@ import logging
 import telebot
 from telebot import types
 from dotenv import load_dotenv
-from app.auth.authenticate import Auth
 
 # Carregar variáveis de ambiente do arquivo .env que está dentro do diretório app
 load_dotenv(os.path.join(os.path.dirname(__file__), 'app', '.env'))
