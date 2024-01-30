@@ -4,6 +4,12 @@ import json
 from datetime import datetime
 from app.auth.authenticate import Auth
 
+# Configurar o logger no script listing
+logging.basicConfig(filename='bot.log',
+                    format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.ERROR)
+logging.getLogger().addHandler(console_handler)
 
 
 class Listing:
@@ -18,7 +24,7 @@ class Listing:
         if obtained_token:
             print(f"Obtained token: {obtained_token}")
             self.token = obtained_token
-            self.header = {'Authorization': f'Bearer {self.token}'}
+            self.header = {'Authorization': f'{self.token}'}
         else:
             print("Failed to obtain token.")
 
@@ -26,7 +32,7 @@ class Listing:
         try:
             response = requests.post(url, headers=self.header, data=params)
             response.raise_for_status()  # Raises HTTPError for bad responses
-            return response.json()
+            return response.json()["root"]
         except requests.RequestException as e:
             logging.error("Error in API request: %s", e)
             raise
@@ -78,12 +84,21 @@ class Listing:
         })
         try:
             response_data = self.make_api_request(url, parameters)
-            # Process the response_data as needed
             print("Requisition successful")
             logging.info("Requisition successful")
+
+            # Process the response_data as needed
+            if response_data:
+                ticket_list = [ticket.get("Assunto", "") for ticket in response_data]
+                return "\n".join(ticket_list)
+            else:
+                return "Nenhum ticket encontrado."
+
         except requests.HTTPError as http_err:
-            if http_err.response.status_code == 401:  # Unauthorized (token expired)
-                logging.warning("Token expired. Refreshing token and retrying...")
+            # Unauthorized (token expired)
+            if http_err.response.status_code == 401:
+                logging.warning(
+                    "Token expired. Refreshing token and retrying...")
                 self.refresh_token()
                 self.get_ticket_list()  # Retry the API request after token refresh
             else:
@@ -91,8 +106,3 @@ class Listing:
         except Exception as e:
             print(f"Error: {e}")
             logging.error("Error: %s", e)
-
-
-if __name__ == "__main__":
-    listing_instance = Listing()
-    listing_instance.get_ticket_list()
