@@ -1,2 +1,0 @@
-ERROR:root:Certifique-se de definir todas as variáveis de ambiente necessárias no arquivo .env
-ERROR:root:Certifique-se de definir todas as variáveis de ambiente necessárias no arquivo .env
