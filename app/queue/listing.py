@@ -1,7 +1,9 @@
 import requests
 import logging
 import json
+import os
 from datetime import datetime
+from dotenv import load_dotenv
 from app.auth.authenticate import Auth
 
 # Configurar o logger no script listing
@@ -14,27 +16,50 @@ logging.getLogger().addHandler(console_handler)
 
 class Listing:
     def __init__(self):
-        self.token = None
-        self.header = None
+        # Substitua 'SEU_TOKEN' pelo nome real da variável de ambiente
+        self.token = os.getenv('TOKEN')
+        self.header = {'Authorization': f'{self.token}'}
         self.refresh_token()
 
     def refresh_token(self):
+        if not self.token:  # Atualiza apenas se o token não estiver definido
+            auth_instance = Auth()
+            obtained_token = auth_instance.token()
+            if obtained_token:
+                logging.info(f"Token updated successfully: {obtained_token}")
+                self.token = obtained_token
+                self.header = {'Authorization': f'{self.token}'}
+            else:
+                logging.warning("Failed to obtain token.")
+
+    def refresh_new_token(self):
         auth_instance = Auth()
         obtained_token = auth_instance.token()
         if obtained_token:
-            print(f"Obtained token: {obtained_token}")
+            logging.info(f"Token updated successfully: {obtained_token}")
             self.token = obtained_token
             self.header = {'Authorization': f'{self.token}'}
         else:
-            print("Failed to obtain token.")
+            logging.warning("Failed to obtain token.")
 
     def make_api_request(self, url, params):
         try:
             response = requests.post(url, headers=self.header, data=params)
             response.raise_for_status()  # Raises HTTPError for bad responses
-            return response.json()["root"]
+            response_data = response.json()
+
+            # Adicione logs para detalhes da solicitação e resposta
+            logging.info(
+                f"{response} - API Request to {url} with params: {params}")
+
+            if response_data != {'erro': 'Token expirado ou não existe'}:
+                return response_data["root"]
+            else:
+                logging.warning("Token expired or not available.")
+                return None  # Não chame recursivamente aqui
+
         except requests.RequestException as e:
-            logging.error("Error in API request: %s", e)
+            logging.error(f"Error in API request: {e}")
             raise
 
     def get_ticket_list(self):
@@ -84,25 +109,23 @@ class Listing:
         })
         try:
             response_data = self.make_api_request(url, parameters)
-            print("Requisition successful")
-            logging.info("Requisition successful")
 
-            # Process the response_data as needed
             if response_data:
-                ticket_list = [ticket.get("Assunto", "") for ticket in response_data]
-                return "\n".join(ticket_list)
+                logging.info("Requisition successful")
+
+                # Process the response_data as needed
+                return response_data
             else:
-                return "Nenhum ticket encontrado."
+                logging.warning("Failed to obtain ticket list.")
+                self.refresh_new_token()
+                return self.get_ticket_list()
 
         except requests.HTTPError as http_err:
-            # Unauthorized (token expired)
             if http_err.response.status_code == 401:
                 logging.warning(
                     "Token expired. Refreshing token and retrying...")
                 self.refresh_token()
-                self.get_ticket_list()  # Retry the API request after token refresh
+                return self.get_ticket_list()  # Retry the API request after token refresh
             else:
                 logging.error("HTTPError: %s", http_err)
-        except Exception as e:
-            print(f"Error: {e}")
-            logging.error("Error: %s", e)
+                raise  # Rethrow the exception after logging
