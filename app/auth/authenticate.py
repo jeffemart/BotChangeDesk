@@ -13,7 +13,7 @@ class Auth:
         load_dotenv()  
 
         # Configurar o logger
-        logging.basicConfig(filename='auth.log', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+        logging.basicConfig(filename='bot.log', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
         # Adicionar um manipulador de logs para enviar mensagens de erro para a saída padrão (console)
         console_handler = logging.StreamHandler()
@@ -50,11 +50,3 @@ class Auth:
 
     def get_token(self):
         return self.__token
-
-if __name__ == "__main__":
-    auth_instance = Auth()
-    obtained_token = auth_instance.token()
-    if obtained_token:
-        print(f"Obtained token: {obtained_token}")
-    else:
-        print("Failed to obtain token.")
