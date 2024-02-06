@@ -1,9 +1,11 @@
 import threading
-import time
 import requests
+import time
 import json
+import os
 from datetime import datetime, timedelta
 from app.auth.authenticate import Auth
+from app.queue.listing import Listing
 import logging
 
 # Configurar o logger no script listing
@@ -18,8 +20,34 @@ class JobThread(threading.Thread):
     def __init__(self):
         super().__init__()
         self._stop_event = threading.Event()
-        self.header = None
+        self.token = os.getenv('TOKEN')
+        self.header = {'Authorization': f'{self.token}'}
+        self.refresh_token()
 
+    
+    def refresh_token(self):
+        if not self.token:  # Atualiza apenas se o token não estiver definido
+            auth_instance = Auth()
+            obtained_token = auth_instance.token()
+            if obtained_token:
+                logging.info(f"Obtained token: {obtained_token}")
+                self.token = obtained_token
+                self.header = {'Authorization': f'{self.token}'}
+            else:
+                logging.error("Failed to obtain token.")
+                
+    
+    def refresh_new_token(self):
+        auth_instance = Auth()
+        obtained_token = auth_instance.token()
+        if obtained_token:
+            logging.info(f"Token updated successfully: {obtained_token}")
+            self.token = obtained_token
+            self.header = {'Authorization': f'{self.token}'}
+        else:
+            logging.warning("Failed to obtain token.")
+    
+    
     def run(self):
         while not self._stop_event.is_set():
             # Trecho de código a ser executado
@@ -30,64 +58,23 @@ class JobThread(threading.Thread):
 
             time.sleep(30)  # Tempo de espera entre as iterações
 
+
     def stop(self):
         self._stop_event.set()
 
+
     def process_tickets(self):
-        url = 'https://api.desk.ms/ChamadosSuporte/lista'
-        parameters = json.dumps({
-            "Pesquisa": "",
-            "Tatual": "",
-            "Ativo": "NaFila",
-            "StatusSLA": "N",
-            "Colunas":
-            {
-                "Chave": "on",
-                "CodChamado": "on",
-                "NomePrioridade": "on",
-                "DataCriacao": "on",
-                "HoraCriacao": "on",
-                "DataFinalizacao": "on",
-                "HoraFinalizacao": "on",
-                "DataAlteracao": "on",
-                "HoraAlteracao": "on",
-                "NomeStatus": "on",
-                "Assunto": "on",
-                "Descricao": "on",
-                "ChaveUsuario": "on",
-                "NomeUsuario": "on",
-                "SobrenomeUsuario": "on",
-                "NomeOperador": "on",
-                "SobrenomeOperador": "on",
-                "TotalAcoes": "on",
-                "TotalAnexos": "on",
-                "Sla": "on",
-                "CodGrupo": "on",
-                "NomeGrupo": "on",
-                "CodSolicitacao": "on",
-                "CodSubCategoria": "on",
-                "CodTipoOcorrencia": "on",
-                "CodCategoriaTipo": "on",
-                "CodPrioridadeAtual": "on",
-                "CodStatusAtual": "on"
-            },
-            "Ordem": [
-                {
-                    "Coluna": "Chave",
-                    "Direcao": "true"
-                }
-            ]
-        })
-
+        listing_instance = Listing()
         try:
-            response_data = self.make_api_request(url, parameters)
-            logging.info("Requisição bem-sucedida")
+            get_listing = listing_instance.get_ticket_list()
+            bot_list = get_listing
 
-            if response_data:
-                for item in response_data:
+            if bot_list:
+                for item in bot_list:
                     if item.get("Assunto") in ["Sistemas - Gestão - ERP - Cadastro de Endereços - Cadastrar", "Sistemas - Gestão - OTTs - Watch Brasil - Sem Acesso"]:
                         self.process_item(item)
-
+                    else:
+                        pass
             else:
                 logging.info("Nenhum ticket encontrado.")
 
@@ -95,7 +82,7 @@ class JobThread(threading.Thread):
             if http_err.response.status_code == 401:
                 logging.warning(
                     "Token expirado. Atualizando token e tentando novamente...")
-                self.refresh_token()
+                self.refresh_new_token()
                 self.process_tickets()
             else:
                 logging.error("HTTPError: %s", http_err)
@@ -107,11 +94,11 @@ class JobThread(threading.Thread):
         logging.info("Processando item com Assunto: %s", item.get("Assunto"))
 
         Parametros_Interacao = {
-            "Chave": item["CodChamado"],
+            "Chave": item.get("CodChamado"),
             "TChamado": {
                 "CodFormaAtendimento": "9",
-                "CodStatus": "0000006",
-                "CodAprovador": [""],
+                "CodStatus": "6",
+                "CodAprovador": "",
                 "TransferirOperador": "",
                 "TransferirGrupo": "",
                 "CodTerceiros": "",
@@ -121,18 +108,18 @@ class JobThread(threading.Thread):
                 "DataAgendamento": "",
                 "HoraAgendamento": "",
                 "CodCausa": "",
-                            "CodOperador": "",
-                            "CodGrupo": "",
-                            "EnviarEmail": "S",
-                            "EnvBase": "N",
-                            "CodFPMsg": "1387",
-                            "DataInteracao": datetime.now().strftime("%d-%m-%Y"),
-                            "HoraInicial": datetime.now().strftime("%H:%M:%S"),
-                            "HoraFinal": (datetime.now() + timedelta(minutes=1)).strftime("%H:%M"),
-                            "SMS": "",
-                            "ObservacaoInterna": "",
-                            "PrimeiroAtendimento": "N",
-                            "SegundoAtendimento": "N"
+                "CodOperador": "",
+                "CodGrupo": "",
+                "EnviarEmail": "S",
+                "EnvBase": "N",
+                "CodFPMsg": "1387",
+                "DataInteracao": f"{datetime.now().strftime("%d-%m-%Y")}",
+                "HoraInicial": f"{datetime.now().strftime("%H:%M")}",
+                "HoraFinal": f"{(datetime.now() + timedelta(minutes=1)).strftime("%H:%M")}",
+                "SMS": "",
+                "ObservacaoInterna": "",
+                "PrimeiroAtendimento": "N",
+                "SegundoAtendimento": "N"
             },
             "TIc": {
                 "Chave": {
@@ -141,20 +128,23 @@ class JobThread(threading.Thread):
                 }
             }
         }
-
+                
+        logging.info(Parametros_Interacao)
         try:
             response = requests.put("https://api.desk.ms/ChamadosSuporte/interagir",
                                     headers=self.header, json=Parametros_Interacao)
             logging.info(response)
+            logging.info(response.json())
 
-            if response.status_code == 200:
+            if response.json() != {'erro': 'Token expirado ou não existe'}:
+                json_response = response.json()
                 with open('interacao.json', 'w', encoding='utf8') as resultado:
-                    json.dump(response.json(), resultado,
-                              indent=4, ensure_ascii=False)
+                    json.dump(json_response, resultado, indent=4, ensure_ascii=False)
                 logging.info("Interação bem-sucedida")
             else:
-                logging.error(
-                    "Falha na requisição. Código de status: %s", response.status_code)
+                logging.error("Falha na requisição. Código de status: %s", response.json())
+                self.refresh_new_token()
+                self.process_tickets()
 
         except requests.RequestException as e:
             logging.error("Erro na requisição: %s", e)
@@ -168,13 +158,5 @@ class JobThread(threading.Thread):
             logging.error("Erro na requisição da API: %s", e)
             raise
 
-    def refresh_token(self):
-        auth_instance = Auth()
-        obtained_token = auth_instance.token()
-        if obtained_token:
-            print(f"Obtained token: {obtained_token}")
-            self.token = obtained_token
-            self.header = {'Authorization': f'{self.token}'}
-        else:
-            print("Failed to obtain token.")
+    
 
