@@ -83,7 +83,6 @@ class JobThread(threading.Thread):
                 logging.warning(
                     "Token expirado. Atualizando token e tentando novamente...")
                 self.refresh_new_token()
-                self.process_tickets()
             else:
                 logging.error("HTTPError: %s", http_err)
 
