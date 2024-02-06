@@ -58,6 +58,7 @@ def handle_inline_menu_options(call):
         if not hasattr(bot, 'job_thread') or not bot.job_thread.is_alive():
             bot.job_thread = JobThread()
             bot.job_thread.start()
+            logging.info("Job iniciado!")
             bot.send_message(call.message.chat.id, "Job iniciado!")
         else:
             bot.send_message(call.message.chat.id,
@@ -67,6 +68,7 @@ def handle_inline_menu_options(call):
         if hasattr(bot, 'job_thread') and bot.job_thread.is_alive():
             bot.job_thread.stop()
             bot.job_thread.join()
+            logging.info("Job interrompido.")
             bot.send_message(call.message.chat.id, "Job interrompido.")
         else:
             bot.send_message(call.message.chat.id,
