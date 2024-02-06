@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 import telebot
 from telebot import types
@@ -31,18 +32,25 @@ bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 listing_call = Listing()
 
 # Comando /start para exibir o menu
+
+
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.InlineKeyboardMarkup(row_width=2)
-    item1 = types.InlineKeyboardButton("Iniciar Job", callback_data='start_job')
+    item1 = types.InlineKeyboardButton(
+        "Iniciar Job", callback_data='start_job')
     item2 = types.InlineKeyboardButton("Parar Job", callback_data='stop_job')
     item3 = types.InlineKeyboardButton("Lista", callback_data='list_ticket')
+    item4 = types.InlineKeyboardButton("Categorias", callback_data='update_subcategory')
 
-    markup.add(item1, item2, item3)
+    markup.add(item1, item2, item3, item4)
 
-    bot.send_message(message.chat.id, "Escolha uma opção:", reply_markup=markup)
+    bot.send_message(message.chat.id, "Escolha uma opção:",
+                     reply_markup=markup)
 
 # Tratamento das opções do menu embutido
+
+
 @bot.callback_query_handler(func=lambda call: True)
 def handle_inline_menu_options(call):
     if call.data == 'start_job':
@@ -52,7 +60,8 @@ def handle_inline_menu_options(call):
             bot.job_thread.start()
             bot.send_message(call.message.chat.id, "Job iniciado!")
         else:
-            bot.send_message(call.message.chat.id, "O job já está em execução.")
+            bot.send_message(call.message.chat.id,
+                             "O job já está em execução.")
     elif call.data == 'stop_job':
         # Lógica para parar o job
         if hasattr(bot, 'job_thread') and bot.job_thread.is_alive():
@@ -60,32 +69,60 @@ def handle_inline_menu_options(call):
             bot.job_thread.join()
             bot.send_message(call.message.chat.id, "Job interrompido.")
         else:
-            bot.send_message(call.message.chat.id, "O job não está em execução.")
+            bot.send_message(call.message.chat.id,
+                             "O job não está em execução.")
     elif call.data == 'list_ticket':
         try:
             # Tentar obter a lista de tickets
+            # Não use .json() aqui, pois a função já retorna o resultado processado
             get_listing = listing_call.get_ticket_list()
-            bot_list = get_listing  # Não use .json() aqui, pois a função já retorna o resultado processado
+            bot_list = get_listing
+            
+            with open('subcategory_list.json', 'r', encoding='utf-8') as json_file:
+                saved_data = json.load(json_file)
+            
+            # Lista para armazenar os resultados
+            result_list = []
+            
+            # Iterar sobre a lista de tickets
+            for ticket in bot_list:
+                for item in saved_data.get('root', []):
+                    if ticket['CodSubCategoria'] == item['Sequencia']:
+                        # Adicionar o resultado à lista
+                        result_list.append((ticket['CodChamado'], item['SubCategoria']))
 
-            # Processar a lista de tickets
-            if bot_list:
-                ticket_list = [ticket.get("Assunto", "") for ticket in bot_list]
-                formatted_ticket_list = "\n".join(ticket_list)
-                bot.send_message(call.message.chat.id, formatted_ticket_list)
-            else:
-                bot.send_message(call.message.chat.id, "Nenhum ticket encontrado.")
+            # Enviar a lista como mensagem
+            formatted_result_list = "\n".join([f"{code}: {sub}" for code, sub in result_list])
+            bot.send_message(call.message.chat.id, formatted_result_list)
+                        
         except Exception as e:
             # Lidar com exceções que podem ocorrer durante a obtenção da lista de tickets
-            bot.send_message(call.message.chat.id, f"Erro ao obter a lista de tickets: {e}")
+            bot.send_message(call.message.chat.id,
+                             f"Erro ao obter a lista de tickets: {e}")
+
+    elif call.data == 'update_subcategory':
+        try:
+            # Lógica para atualizar a lista de subcategorias
+            subcategory_instance = SubcategoryListing()
+            subcategory_instance.get_subcategory_list()
+            bot.send_message(
+                call.message.chat.id, "Lista de subcategorias atualizada e salva em JSON.")
+        except Exception as e:
+            # Lidar com exceções que podem ocorrer durante a atualização da lista de subcategorias
+            bot.send_message(call.message.chat.id,
+                             f"Erro ao atualizar a lista de subcategorias: {e}")
+
 
 def main():
     # Verificar se todas as variáveis de ambiente necessárias estão definidas
     if not TELEGRAM_BOT_TOKEN:
-        logging.error("Certifique-se de definir a variável de ambiente TELEGRAM_BOT_TOKEN no arquivo .env")
+        logging.error(
+            "Certifique-se de definir a variável de ambiente TELEGRAM_BOT_TOKEN no arquivo .env")
         return
 
     # Iniciar o bot
     bot.polling()
+
 
 if __name__ == '__main__':
     main()

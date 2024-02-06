@@ -1,9 +1,10 @@
 
 import requests
 import logging
+import json
+import os
 from dotenv import load_dotenv
 from app.auth.authenticate import Auth
-import os
 
 # Configurar o logger
 logging.basicConfig(filename='bot.log',
@@ -14,21 +15,21 @@ logging.getLogger().addHandler(console_handler)
 
 
 class SubcategoryListing:
-    def __init__(self, token):
-        self.token = token
+    def __init__(self):
+        self.token = os.getenv('TOKEN')
         self.header = {'Authorization': f'{self.token}'}
         self.refresh_token()
-        
+
     def refresh_token(self):
-        if not self.token:  # Atualiza apenas se o token não estiver definido
-            auth_instance = Auth()
-            obtained_token = auth_instance.token()
-            if obtained_token:
-                logging.info(f"Token updated successfully: {obtained_token}")
-                self.token = obtained_token
-                self.header = {'Authorization': f'{self.token}'}
-            else:
-                logging.warning("Failed to obtain token.")
+        # if not self.token:  # Atualiza apenas se o token não estiver definido
+        auth_instance = Auth()
+        obtained_token = auth_instance.token()
+        if obtained_token:
+            logging.info(f"Token updated successfully: {obtained_token}")
+            self.token = obtained_token
+            self.header = {'Authorization': f'{self.token}'}
+        else:
+            logging.warning("Failed to obtain token.")
 
     def make_api_request(self, url, params):
         try:
@@ -38,7 +39,6 @@ class SubcategoryListing:
 
             # Adicione logs para detalhes da solicitação e resposta
             logging.info(f"API Request to {url} with params: {params}")
-            logging.info(f"API Response: {response_data}")
 
             if response_data != {'erro': 'Token expirado ou não existe'}:
                 return response_data
@@ -61,15 +61,20 @@ class SubcategoryListing:
                     "Direcao": "true"
                 }
             ]
-        }  # Adicione os parâmetros necessários, se houver
+        }
 
         try:
             response_data = self.make_api_request(url, parameters)
 
             if response_data:
                 logging.info("Subcategory list obtained successfully")
+                print(response_data)
 
                 # Process the response_data as needed
+
+                # Save response_data to a JSON file
+                self.save_to_json(response_data, 'subcategory_list.json')
+
                 return response_data
             else:
                 logging.warning("Failed to obtain subcategory list.")
@@ -87,3 +92,7 @@ class SubcategoryListing:
         except Exception as e:
             logging.error("Error: %s", e)
             raise  # Rethrow the exception after logging
+
+    def save_to_json(self, data, filename):
+        with open(filename, 'w', encoding='utf-8') as json_file:
+            json.dump(data, json_file, ensure_ascii=False, indent=4)
