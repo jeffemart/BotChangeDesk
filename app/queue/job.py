@@ -24,7 +24,6 @@ class JobThread(threading.Thread):
         self.header = {'Authorization': f'{self.token}'}
         self.refresh_token()
 
-    
     def refresh_token(self):
         if not self.token:  # Atualiza apenas se o token não estiver definido
             auth_instance = Auth()
@@ -35,8 +34,7 @@ class JobThread(threading.Thread):
                 self.header = {'Authorization': f'{self.token}'}
             else:
                 logging.error("Failed to obtain token.")
-                
-    
+
     def refresh_new_token(self):
         auth_instance = Auth()
         obtained_token = auth_instance.token()
@@ -46,8 +44,7 @@ class JobThread(threading.Thread):
             self.header = {'Authorization': f'{self.token}'}
         else:
             logging.warning("Failed to obtain token.")
-    
-    
+
     def run(self):
         while not self._stop_event.is_set():
             # Trecho de código a ser executado
@@ -58,10 +55,8 @@ class JobThread(threading.Thread):
 
             time.sleep(30)  # Tempo de espera entre as iterações
 
-
     def stop(self):
         self._stop_event.set()
-
 
     def process_tickets(self):
         listing_instance = Listing()
@@ -77,7 +72,8 @@ class JobThread(threading.Thread):
                         pass
             else:
                 logging.info("Nenhum ticket encontrado.")
-
+    
+            
         except requests.HTTPError as http_err:
             if http_err.response.status_code == 401:
                 logging.warning(
@@ -127,7 +123,7 @@ class JobThread(threading.Thread):
                 }
             }
         }
-                
+
         logging.info(Parametros_Interacao)
         try:
             response = requests.put("https://api.desk.ms/ChamadosSuporte/interagir",
@@ -138,12 +134,13 @@ class JobThread(threading.Thread):
             if response.json() != {'erro': 'Token expirado ou não existe'}:
                 json_response = response.json()
                 with open('interacao.json', 'w', encoding='utf8') as resultado:
-                    json.dump(json_response, resultado, indent=4, ensure_ascii=False)
+                    json.dump(json_response, resultado,
+                              indent=4, ensure_ascii=False)
                 logging.info("Interação bem-sucedida")
             else:
-                logging.error("Falha na requisição. Código de status: %s", response.json())
+                logging.error(
+                    "Falha na requisição. Código de status: %s", response.json())
                 self.refresh_new_token()
-                self.process_tickets()
 
         except requests.RequestException as e:
             logging.error("Erro na requisição: %s", e)
@@ -156,6 +153,3 @@ class JobThread(threading.Thread):
         except requests.RequestException as e:
             logging.error("Erro na requisição da API: %s", e)
             raise
-
-    
-
