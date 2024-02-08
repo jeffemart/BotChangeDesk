@@ -1,24 +1,26 @@
-import requests
-import logging
-import json
 import os
+import json
+import logging
+import requests
+
+from datetime import datetime, timedelta
 from dotenv import load_dotenv, set_key
+
+# Configurar o logger no script listing
+logging.basicConfig(filename='bot.log',
+                    format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.ERROR)
+logging.getLogger().addHandler(console_handler)
+
 
 class Auth:
     def __init__(self, url='https://api.desk.ms/Login/autenticar'):
         self.__token = ''
         self.url = url
-        
+
         # Load environment variables from the .env file
-        load_dotenv()  
-
-        # Configurar o logger
-        logging.basicConfig(filename='bot.log', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
-
-        # Adicionar um manipulador de logs para enviar mensagens de erro para a saída padrão (console)
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.ERROR)
-        logging.getLogger().addHandler(console_handler)
+        load_dotenv()
 
     def token(self) -> str:
         # Retrieve credentials from the environment
@@ -26,10 +28,12 @@ class Auth:
         public_key = os.getenv('PUBLICKEY')
 
         if not authorization or not public_key:
-            logging.warning("The environment variables AUTHORIZATION or PUBLICKEY are missing.")
+            logging.warning(
+                "The environment variables AUTHORIZATION or PUBLICKEY are missing.")
             return None
 
-        header = {'Authorization': os.getenv('AUTHORIZATION'), 'content-type': 'application/json'}
+        header = {'Authorization': os.getenv(
+            'AUTHORIZATION'), 'content-type': 'application/json'}
         params = json.dumps({'PublicKey': public_key})
 
         try:
@@ -39,6 +43,7 @@ class Auth:
 
                 self.__token = response.json()
                 logging.debug("Token acquisition successful")
+                print(datetime.now().strftime("%H:%M:%S"))
 
                 # Save the token in the .env file
                 set_key('./app/.env', 'TOKEN', self.__token)

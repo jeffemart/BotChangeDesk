@@ -5,7 +5,6 @@ import telebot
 from telebot import types
 from dotenv import load_dotenv
 
-from app.auth.authenticate import Auth
 from app.queue.listing import Listing
 from app.queue.job import JobThread
 from app.queue.subcategory import SubcategoryListing
@@ -25,23 +24,49 @@ logging.getLogger().addHandler(console_handler)
 # Obter o token do ambiente
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
+# Obter o ID do Telegram do usuário do ambiente
+TELEGRAM_USER_ID = os.getenv('TELEGRAM_USER_ID')
+
+# Verificar se o ID do Telegram do usuário está definido
+if not TELEGRAM_USER_ID:
+    logging.error("Certifique-se de definir a variável de ambiente TELEGRAM_USER_ID no arquivo .env")
+    exit()
+
 # Inicializar o bot
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 
 # Criar uma instância da classe Listing
 listing_call = Listing()
 
+
+# Função para verificar o ID do usuário nas mensagens
+def is_user_authorized(message):
+    # Obter o ID do remetente da mensagem
+    user_id = message.from_user.id
+
+    # Verificar se o ID do remetente é igual ao ID do usuário autorizado
+    if user_id != int(TELEGRAM_USER_ID):
+        logging.warning(f"Usuário não autorizado. ID do usuário: {user_id}")
+        bot.send_message(user_id, "Você não está autorizado a usar este bot.")
+        return False
+
+    return True
+
+
 # Comando /start para exibir o menu
-
-
 @bot.message_handler(commands=['start'])
 def start(message):
+    # Verificar se o usuário é autorizado
+    if not is_user_authorized(message):
+        return
+    
     markup = types.InlineKeyboardMarkup(row_width=2)
     item1 = types.InlineKeyboardButton(
         "Iniciar Job", callback_data='start_job')
     item2 = types.InlineKeyboardButton("Parar Job", callback_data='stop_job')
     item3 = types.InlineKeyboardButton("Lista", callback_data='list_ticket')
-    item4 = types.InlineKeyboardButton("Categorias", callback_data='update_subcategory')
+    item4 = types.InlineKeyboardButton(
+        "Categorias", callback_data='update_subcategory')
 
     markup.add(item1, item2, item3, item4)
 
@@ -79,24 +104,26 @@ def handle_inline_menu_options(call):
             # Não use .json() aqui, pois a função já retorna o resultado processado
             get_listing = listing_call.get_ticket_list()
             bot_list = get_listing
-            
+
             with open('subcategory_list.json', 'r', encoding='utf-8') as json_file:
                 saved_data = json.load(json_file)
-            
+
             # Lista para armazenar os resultados
             result_list = []
-            
+
             # Iterar sobre a lista de tickets
             for ticket in bot_list:
                 for item in saved_data.get('root', []):
                     if ticket['CodSubCategoria'] == item['Sequencia']:
                         # Adicionar o resultado à lista
-                        result_list.append((ticket['CodChamado'], item['SubCategoria']))
+                        result_list.append(
+                            (ticket['CodChamado'], item['SubCategoria']))
 
             # Enviar a lista como mensagem
-            formatted_result_list = "\n".join([f"{code}: {sub}" for code, sub in result_list])
+            formatted_result_list = "\n".join(
+                [f"{code}: {sub}" for code, sub in result_list])
             bot.send_message(call.message.chat.id, formatted_result_list)
-                        
+
         except Exception as e:
             # Lidar com exceções que podem ocorrer durante a obtenção da lista de tickets
             bot.send_message(call.message.chat.id,

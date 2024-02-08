@@ -1,12 +1,13 @@
-import threading
-import requests
-import time
-import json
 import os
+import json
+import time
+import logging
+import requests
+import threading
+
 from datetime import datetime, timedelta
 from app.auth.authenticate import Auth
 from app.queue.listing import Listing
-import logging
 
 # Configurar o logger no script listing
 logging.basicConfig(filename='bot.log',
@@ -72,8 +73,7 @@ class JobThread(threading.Thread):
                         pass
             else:
                 logging.info("Nenhum ticket encontrado.")
-    
-            
+
         except requests.HTTPError as http_err:
             if http_err.response.status_code == 401:
                 logging.warning(
@@ -84,6 +84,8 @@ class JobThread(threading.Thread):
 
         except Exception as e:
             logging.error("Erro ao processar tickets: %s", e)
+
+        self.token = os.getenv('TOKEN')
 
     def process_item(self, item):
         logging.info("Processando item com Assunto: %s", item.get("Assunto"))
@@ -140,7 +142,6 @@ class JobThread(threading.Thread):
             else:
                 logging.error(
                     "Falha na requisição. Código de status: %s", response.json())
-                self.refresh_new_token()
 
         except requests.RequestException as e:
             logging.error("Erro na requisição: %s", e)
