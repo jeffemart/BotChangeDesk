@@ -10,7 +10,7 @@ from app.queue.job import JobThread
 from app.queue.subcategory import SubcategoryListing
 
 # Carregar variáveis de ambiente do arquivo .env que está dentro do diretório app
-load_dotenv(os.path.join(os.path.dirname(__file__), 'app', '.env'))
+load_dotenv(os.path.join(os.path.dirname(os.path.basename(__file__)), 'app', '.env'))
 
 # Configurar o logger
 logging.basicConfig(filename='bot.log',
@@ -29,7 +29,7 @@ TELEGRAM_USER_ID = os.getenv('TELEGRAM_USER_ID')
 
 # Verificar se o ID do Telegram do usuário está definido
 if not TELEGRAM_USER_ID:
-    logging.error("Certifique-se de definir a variável de ambiente TELEGRAM_USER_ID no arquivo .env")
+    logging.error(f"{os.path.basename(__file__)}: Certifique-se de definir a variável de ambiente TELEGRAM_USER_ID no arquivo .env")
     exit()
 
 # Inicializar o bot
@@ -46,7 +46,7 @@ def is_user_authorized(message):
 
     # Verificar se o ID do remetente é igual ao ID do usuário autorizado
     if user_id != int(TELEGRAM_USER_ID):
-        logging.warning(f"Usuário não autorizado. ID do usuário: {user_id}")
+        logging.warning(f"{os.path.basename(__file__)}: Usuário não autorizado. ID do usuário: {user_id}")
         bot.send_message(user_id, "Você não está autorizado a usar este bot.")
         return False
 
@@ -83,7 +83,7 @@ def handle_inline_menu_options(call):
         if not hasattr(bot, 'job_thread') or not bot.job_thread.is_alive():
             bot.job_thread = JobThread()
             bot.job_thread.start()
-            logging.info("Job iniciado!")
+            logging.info(f"{os.path.basename(__file__)}: Job iniciado!")
             bot.send_message(call.message.chat.id, "Job iniciado!")
         else:
             bot.send_message(call.message.chat.id,
@@ -93,7 +93,7 @@ def handle_inline_menu_options(call):
         if hasattr(bot, 'job_thread') and bot.job_thread.is_alive():
             bot.job_thread.stop()
             bot.job_thread.join()
-            logging.info("Job interrompido.")
+            logging.info(f"{os.path.basename(__file__)}: Job interrompido.")
             bot.send_message(call.message.chat.id, "Job interrompido.")
         else:
             bot.send_message(call.message.chat.id,
@@ -164,7 +164,7 @@ def main():
     # Verificar se todas as variáveis de ambiente necessárias estão definidas
     if not TELEGRAM_BOT_TOKEN:
         logging.error(
-            "Certifique-se de definir a variável de ambiente TELEGRAM_BOT_TOKEN no arquivo .env")
+            f"{os.path.basename(__file__)}: Certifique-se de definir a variável de ambiente TELEGRAM_BOT_TOKEN no arquivo .env")
         return
 
     # Iniciar o bot
