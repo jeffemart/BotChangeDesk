@@ -100,29 +100,47 @@ def handle_inline_menu_options(call):
                              "O job não está em execução.")
     elif call.data == 'list_ticket':
         try:
-            # Tentar obter a lista de tickets
-            # Não use .json() aqui, pois a função já retorna o resultado processado
+           # Tentar obter a lista de tickets
             get_listing = listing_call.get_ticket_list()
             bot_list = get_listing
+            print(bot_list)
 
-            with open('subcategory_list.json', 'r', encoding='utf-8') as json_file:
-                saved_data = json.load(json_file)
+            # Verificar se a lista de tickets não está vazia
+            if not bot_list:
+                bot.send_message(call.message.chat.id, "A lista de tickets está vazia.")
+                return
 
-            # Lista para armazenar os resultados
-            result_list = []
+            # Lógica para atualizar a lista de subcategorias
+            subcategory_instance = SubcategoryListing()
+            subcategory_instance.get_subcategory_list()
 
-            # Iterar sobre a lista de tickets
-            for ticket in bot_list:
-                for item in saved_data.get('root', []):
-                    if ticket['CodSubCategoria'] == item['Sequencia']:
-                        # Adicionar o resultado à lista
-                        result_list.append(
-                            (ticket['CodChamado'], item['SubCategoria']))
+            # Verificar se o arquivo subcategory_list.json existe
+            subcategory_list_file = 'subcategory_list.json'
+            if os.path.exists(subcategory_list_file):
+                with open(subcategory_list_file, 'r', encoding='utf-8') as json_file:
+                    saved_data = json.load(json_file)
 
-            # Enviar a lista como mensagem
-            formatted_result_list = "\n".join(
-                [f"{code}: {sub}" for code, sub in result_list])
-            bot.send_message(call.message.chat.id, formatted_result_list)
+                # Lista para armazenar os resultados
+                result_list = []
+
+                # Iterar sobre a lista de tickets
+                for ticket in bot_list:
+                    for item in saved_data.get('root', []):
+                        if ticket['CodSubCategoria'] == item['Sequencia']:
+                            # Adicionar o resultado à lista
+                            result_list.append(
+                                (ticket['CodChamado'], item['SubCategoria']))
+
+                # Verificar se a lista de resultados não está vazia
+                if not result_list:
+                    bot.send_message(call.message.chat.id, "Não foram encontrados resultados correspondentes na lista de subcategorias.")
+                else:
+                    # Enviar a lista como mensagem
+                    formatted_result_list = "\n".join(
+                        [f"{code}: {sub}" for code, sub in result_list])
+                    bot.send_message(call.message.chat.id, formatted_result_list)
+            else:
+                bot.send_message(call.message.chat.id, "O arquivo subcategory_list.json não existe. Execute /update_subcategory para atualizar a lista.")
 
         except Exception as e:
             # Lidar com exceções que podem ocorrer durante a obtenção da lista de tickets

@@ -43,7 +43,7 @@ class Auth:
 
                 self.__token = response.json()
                 logging.debug("Token acquisition successful")
-                print(datetime.now().strftime("%H:%M:%S"))
+                print(f"{datetime.now().strftime("%H:%M:%S")} - Token acquisition: {self.__token}")
 
                 # Save the token in the .env file
                 set_key('./app/.env', 'TOKEN', self.__token)
