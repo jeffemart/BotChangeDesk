@@ -68,7 +68,6 @@ class SubcategoryListing:
 
             if response_data:
                 logging.info("Subcategory list obtained successfully")
-                print(response_data)
 
                 # Process the response_data as needed
 

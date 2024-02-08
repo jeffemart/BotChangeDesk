@@ -114,18 +114,19 @@ class Listing:
                 logging.info("Requisition successful")
 
                 # Process the response_data as needed
+                print("Executou a lista!")
                 return response_data
             else:
                 logging.warning("Failed to obtain ticket list.")
                 self.refresh_new_token()
-                return self.get_ticket_list()
+                return None
 
         except requests.HTTPError as http_err:
             if http_err.response.status_code == 401:
                 logging.warning(
                     "Token expired. Refreshing token and retrying...")
                 self.refresh_token()
-                return self.get_ticket_list()  # Retry the API request after token refresh
+                return None  # Retry the API request after token refresh
             else:
                 logging.error("HTTPError: %s", http_err)
                 raise  # Rethrow the exception after logging
