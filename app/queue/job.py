@@ -30,21 +30,21 @@ class JobThread(threading.Thread):
             auth_instance = Auth()
             obtained_token = auth_instance.token()
             if obtained_token:
-                logging.info(f"Obtained token: {obtained_token}")
+                logging.info(f"{os.path.basename(__file__)}: Obtained token: {obtained_token}")
                 self.token = obtained_token
                 self.header = {'Authorization': f'{self.token}'}
             else:
-                logging.error("Failed to obtain token.")
+                logging.error(f"{os.path.basename(__file__)}: Failed to obtain token.")
 
     def refresh_new_token(self):
         auth_instance = Auth()
         obtained_token = auth_instance.token()
         if obtained_token:
-            logging.info(f"Token updated successfully: {obtained_token}")
+            logging.info(f"{os.path.basename(__file__)}: Token updated successfully: {obtained_token}")
             self.token = obtained_token
             self.header = {'Authorization': f'{self.token}'}
         else:
-            logging.warning("Failed to obtain token.")
+            logging.warning(f"{os.path.basename(__file__)}: Failed to obtain token.")
 
     def run(self):
         while not self._stop_event.is_set():
@@ -52,7 +52,7 @@ class JobThread(threading.Thread):
             try:
                 self.process_tickets()
             except Exception as e:
-                logging.error("Erro ao processar tickets: %s", e)
+                logging.error(f"{os.path.basename(__file__)}: Erro ao processar tickets: %s", e)
 
             time.sleep(30)  # Tempo de espera entre as iterações
 
@@ -72,23 +72,23 @@ class JobThread(threading.Thread):
                     else:
                         pass
             else:
-                logging.info("Nenhum ticket encontrado.")
+                logging.info(f"{os.path.basename(__file__)}: Nenhum ticket encontrado.")
 
         except requests.HTTPError as http_err:
             if http_err.response.status_code == 401:
                 logging.warning(
-                    "Token expirado. Atualizando token e tentando novamente...")
+                    f"{os.path.basename(__file__)}: Token expirado. Atualizando token e tentando novamente...")
                 self.refresh_new_token()
             else:
-                logging.error("HTTPError: %s", http_err)
+                logging.error(f"{os.path.basename(__file__)}: HTTPError: %s", http_err)
 
         except Exception as e:
-            logging.error("Erro ao processar tickets: %s", e)
+            logging.error(f"{os.path.basename(__file__)}: Erro ao processar tickets: %s", e)
 
         self.token = os.getenv('TOKEN')
 
     def process_item(self, item):
-        logging.info("Processando item com Assunto: %s", item.get("Assunto"))
+        logging.info(f"{os.path.basename(__file__)}: Processando item com Assunto: %s", item.get("Assunto"))
 
         Parametros_Interacao = {
             "Chave": item.get("CodChamado"),
@@ -126,25 +126,25 @@ class JobThread(threading.Thread):
             }
         }
 
-        logging.info(Parametros_Interacao)
+        logging.info(f"{os.path.basename(__file__)}: Parametros_Interacao")
         try:
             response = requests.put("https://api.desk.ms/ChamadosSuporte/interagir",
                                     headers=self.header, json=Parametros_Interacao)
-            logging.info(response)
-            logging.info(response.json())
+            logging.info(f"{os.path.basename(__file__)}: {response}")
+            logging.info(f"{os.path.basename(__file__)}: {response.json()}")
 
             if response.json() != {'erro': 'Token expirado ou não existe'}:
                 json_response = response.json()
                 with open('interacao.json', 'w', encoding='utf8') as resultado:
                     json.dump(json_response, resultado,
                               indent=4, ensure_ascii=False)
-                logging.info("Interação bem-sucedida")
+                logging.info(f"{os.path.basename(__file__)}: Interação bem-sucedida")
             else:
                 logging.error(
-                    "Falha na requisição. Código de status: %s", response.json())
+                    f"{os.path.basename(__file__)}: Falha na requisição. Código de status: %s", response.json())
 
         except requests.RequestException as e:
-            logging.error("Erro na requisição: %s", e)
+            logging.error(f"{os.path.basename(__file__)}: Erro na requisição: %s", e)
 
     def make_api_request(self, url, params):
         try:
@@ -152,5 +152,5 @@ class JobThread(threading.Thread):
             response.raise_for_status()
             return response.json().get("root", [])
         except requests.RequestException as e:
-            logging.error("Erro na requisição da API: %s", e)
+            logging.error(f"{os.path.basename(__file__)}: Erro na requisição da API: %s", e)
             raise

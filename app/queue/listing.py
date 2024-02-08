@@ -26,21 +26,23 @@ class Listing:
             auth_instance = Auth()
             obtained_token = auth_instance.token()
             if obtained_token:
-                logging.info(f"Token updated successfully: {obtained_token}")
+                logging.info(f"{os.path.basename(__file__)}: Token updated successfully: {obtained_token}")
                 self.token = obtained_token
                 self.header = {'Authorization': f'{self.token}'}
             else:
-                logging.warning("Failed to obtain token.")
+                logging.warning(f"{os.path.basename(__file__)}: Failed to obtain token.")
+        else:
+            logging.warning(f"{os.path.basename(__file__)}: Token já definido!")
 
     def refresh_new_token(self):
         auth_instance = Auth()
         obtained_token = auth_instance.token()
         if obtained_token:
-            logging.info(f"Token updated successfully: {obtained_token}")
+            logging.info(f"{os.path.basename(__file__)}: Token updated successfully: {obtained_token}")
             self.token = obtained_token
             self.header = {'Authorization': f'{self.token}'}
         else:
-            logging.warning("Failed to obtain token.")
+            logging.warning(f"{os.path.basename(__file__)}: Failed to obtain token.")
 
     def make_api_request(self, url, params):
         try:
@@ -50,16 +52,16 @@ class Listing:
 
             # Adicione logs para detalhes da solicitação e resposta
             logging.info(
-                f"{response} - API Request to {url} with params: {params}")
+                f"{os.path.basename(__file__)}: {response} - API Request to {url} with params: {params}")
 
             if response_data != {'erro': 'Token expirado ou não existe'}:
                 return response_data["root"]
             else:
-                logging.warning("Token expired or not available.")
+                logging.warning(f"{os.path.basename(__file__)}: Token expired or not available.")
                 return None  # Não chame recursivamente aqui
 
         except requests.RequestException as e:
-            logging.error(f"Error in API request: {e}")
+            logging.error(f"{os.path.basename(__file__)}: Error in API request: {e}")
             raise
 
     def get_ticket_list(self):
@@ -111,22 +113,22 @@ class Listing:
             response_data = self.make_api_request(url, parameters)
 
             if response_data:
-                logging.info("Requisition successful")
+                logging.info(f"{os.path.basename(__file__)}: Requisition successful")
 
                 # Process the response_data as needed
                 print("Executou a lista!")
                 return response_data
             else:
-                logging.warning("Failed to obtain ticket list.")
+                logging.warning(f"{os.path.basename(__file__)}: Failed to obtain ticket list.")
                 self.refresh_new_token()
                 return None
 
         except requests.HTTPError as http_err:
             if http_err.response.status_code == 401:
                 logging.warning(
-                    "Token expired. Refreshing token and retrying...")
+                    f"{os.path.basename(__file__)}: Token expired. Refreshing token and retrying...")
                 self.refresh_token()
                 return None  # Retry the API request after token refresh
             else:
-                logging.error("HTTPError: %s", http_err)
+                logging.error(f"{os.path.basename(__file__)}: HTTPError: %s", http_err)
                 raise  # Rethrow the exception after logging

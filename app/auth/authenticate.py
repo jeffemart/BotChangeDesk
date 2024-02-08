@@ -29,7 +29,7 @@ class Auth:
 
         if not authorization or not public_key:
             logging.warning(
-                "The environment variables AUTHORIZATION or PUBLICKEY are missing.")
+                f"{os.path.basename(__file__)}: The environment variables AUTHORIZATION or PUBLICKEY are missing.")
             return None
 
         header = {'Authorization': os.getenv(
@@ -42,7 +42,7 @@ class Auth:
                 response.raise_for_status()  # Raise an HTTPError for bad responses
 
                 self.__token = response.json()
-                logging.debug("Token acquisition successful")
+                logging.debug(f"{os.path.basename(__file__)}: Token acquisition successful")
                 print(f"{datetime.now().strftime("%H:%M:%S")} - Token acquisition: {self.__token}")
 
                 # Save the token in the .env file
@@ -50,7 +50,7 @@ class Auth:
 
                 return self.__token
         except requests.RequestException as e:
-            logging.warning("Token acquisition failed. Error: %s", e)
+            logging.warning(f"{os.path.basename(__file__)}: Token acquisition failed. Error: %s", e)
             return None
 
     def get_token(self):
