@@ -114,10 +114,10 @@ class JobThread(threading.Thread):
 
         logging.info(f"{os.path.basename(__file__)}: Parametros_Interacao")
         try:
-            response = requests.put("https://api.desk.ms/ChamadosSuporte/interagir", headers={'Authorization': f'{os.getenv('TOKEN')}'}, json=Parametros_Interacao)
+            response = requests.put("https://api.desk.ms/ChamadosSuporte/interagir", headers={'Authorization': f'{self.listing_instance.token}'}, json=Parametros_Interacao)
             logging.info(f"{os.path.basename(__file__)}: {response}")
             logging.info(f"{os.path.basename(__file__)}: {response.json()}")
-
+            
             if response.json() != {'erro': 'Token expirado ou não existe'}:
                 json_response = response.json()
                 with open('interacao.json', 'w', encoding='utf8') as resultado:
