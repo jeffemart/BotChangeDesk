@@ -20,16 +20,24 @@ class SubcategoryListing:
         self.header = {'Authorization': f'{self.token}'}
         self.refresh_token()
 
+
     def refresh_token(self):
-        # if not self.token:  # Atualiza apenas se o token não estiver definido
-        auth_instance = Auth()
-        obtained_token = auth_instance.token()
-        if obtained_token:
-            logging.info(f"Token updated successfully: {obtained_token}")
-            self.token = obtained_token
-            self.header = {'Authorization': f'{self.token}'}
+        if not self.token:  # Atualiza apenas se o token não estiver definido
+            auth_instance = Auth()
+            obtained_token = auth_instance.token()
+            if obtained_token:
+                logging.info(f"{os.path.basename(__file__)}: Token atualizado com sucesso: {obtained_token}")
+                self.token = obtained_token
+                self.header = {'Authorization': f'{self.token}'}
+            else:
+                logging.warning(
+                    f"{os.path.basename(__file__)}: Falha ao obter o token.")
         else:
-            logging.warning("Failed to obtain token.")
+            logging.warning(
+                f"{os.path.basename(__file__)}: Token já definido!")
+            # Atualiza o header com o novo token
+            self.header = {'Authorization': f'{self.token}'}
+
 
     def make_api_request(self, url, params):
         try:
@@ -49,6 +57,7 @@ class SubcategoryListing:
         except requests.RequestException as e:
             logging.error(f"Error in API request: {e}")
             raise
+
 
     def get_subcategory_list(self):
         url = 'https://api.desk.ms/SubCategorias/lista'
@@ -91,6 +100,7 @@ class SubcategoryListing:
         except Exception as e:
             logging.error("Error: %s", e)
             raise  # Rethrow the exception after logging
+
 
     def save_to_json(self, data, filename):
         with open(filename, 'w', encoding='utf-8') as json_file:
