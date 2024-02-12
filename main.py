@@ -1,7 +1,8 @@
-import os
-import json
 import logging
 import telebot
+import json
+import os
+
 from telebot import types
 from dotenv import load_dotenv
 
@@ -9,8 +10,10 @@ from app.queue.listing import Listing
 from app.queue.job import JobThread
 from app.queue.subcategory import SubcategoryListing
 
+
 # Carregar variáveis de ambiente do arquivo .env que está dentro do diretório app
-load_dotenv(os.path.join(os.path.dirname(os.path.basename(__file__)), 'app', '.env'))
+load_dotenv(os.path.join(os.path.dirname(
+    os.path.basename(__file__)), 'app', '.env'))
 
 # Configurar o logger
 logging.basicConfig(filename='bot.log',
@@ -29,7 +32,8 @@ TELEGRAM_USER_ID = os.getenv('TELEGRAM_USER_ID')
 
 # Verificar se o ID do Telegram do usuário está definido
 if not TELEGRAM_USER_ID:
-    logging.error(f"{os.path.basename(__file__)}: Certifique-se de definir a variável de ambiente TELEGRAM_USER_ID no arquivo .env")
+    logging.error(f"{os.path.basename(
+        __file__)}: Certifique-se de definir a variável de ambiente TELEGRAM_USER_ID no arquivo .env")
     exit()
 
 # Inicializar o bot
@@ -46,7 +50,8 @@ def is_user_authorized(message):
 
     # Verificar se o ID do remetente é igual ao ID do usuário autorizado
     if user_id != int(TELEGRAM_USER_ID):
-        logging.warning(f"{os.path.basename(__file__)}: Usuário não autorizado. ID do usuário: {user_id}")
+        logging.warning(f"{os.path.basename(__file__)
+                           }: Usuário não autorizado. ID do usuário: {user_id}")
         bot.send_message(user_id, "Você não está autorizado a usar este bot.")
         return False
 
@@ -59,7 +64,7 @@ def start(message):
     # Verificar se o usuário é autorizado
     if not is_user_authorized(message):
         return
-    
+
     markup = types.InlineKeyboardMarkup(row_width=2)
     item1 = types.InlineKeyboardButton(
         "Iniciar Job", callback_data='start_job')
@@ -103,11 +108,11 @@ def handle_inline_menu_options(call):
            # Tentar obter a lista de tickets
             get_listing = listing_call.get_ticket_list()
             bot_list = get_listing
-            print(bot_list)
 
             # Verificar se a lista de tickets não está vazia
             if not bot_list:
-                bot.send_message(call.message.chat.id, "A lista de tickets está vazia.")
+                bot.send_message(call.message.chat.id,
+                                 "A lista de tickets está vazia.")
                 return
 
             # Lógica para atualizar a lista de subcategorias
@@ -133,14 +138,17 @@ def handle_inline_menu_options(call):
 
                 # Verificar se a lista de resultados não está vazia
                 if not result_list:
-                    bot.send_message(call.message.chat.id, "Não foram encontrados resultados correspondentes na lista de subcategorias.")
+                    bot.send_message(
+                        call.message.chat.id, "Não foram encontrados resultados correspondentes na lista de subcategorias.")
                 else:
                     # Enviar a lista como mensagem
                     formatted_result_list = "\n".join(
                         [f"{code}: {sub}" for code, sub in result_list])
-                    bot.send_message(call.message.chat.id, formatted_result_list)
+                    bot.send_message(call.message.chat.id,
+                                     formatted_result_list)
             else:
-                bot.send_message(call.message.chat.id, "O arquivo subcategory_list.json não existe. Execute /update_subcategory para atualizar a lista.")
+                bot.send_message(
+                    call.message.chat.id, "O arquivo subcategory_list.json não existe. Execute /update_subcategory para atualizar a lista.")
 
         except Exception as e:
             # Lidar com exceções que podem ocorrer durante a obtenção da lista de tickets
@@ -163,8 +171,8 @@ def handle_inline_menu_options(call):
 def main():
     # Verificar se todas as variáveis de ambiente necessárias estão definidas
     if not TELEGRAM_BOT_TOKEN:
-        logging.error(
-            f"{os.path.basename(__file__)}: Certifique-se de definir a variável de ambiente TELEGRAM_BOT_TOKEN no arquivo .env")
+        logging.error(f"{os.path.basename(
+            __file__)}: Certifique-se de definir a variável de ambiente TELEGRAM_BOT_TOKEN no arquivo .env")
         return
 
     # Iniciar o bot

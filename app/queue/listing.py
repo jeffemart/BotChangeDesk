@@ -2,9 +2,11 @@ import requests
 import logging
 import json
 import os
+
 from datetime import datetime
 from dotenv import load_dotenv
 from app.auth.authenticate import Auth
+
 
 # Configurar o logger no script listing
 logging.basicConfig(filename='bot.log',
@@ -16,6 +18,9 @@ logging.getLogger().addHandler(console_handler)
 
 class Listing:
     def __init__(self):
+        load_dotenv(os.path.abspath(os.path.join(
+            os.path.dirname(__file__), 'app', '.env')))
+
         # Substitua 'SEU_TOKEN' pelo nome real da variável de ambiente
         self.token = os.getenv('TOKEN')
         self.header = {'Authorization': f'{self.token}'}
@@ -26,23 +31,30 @@ class Listing:
             auth_instance = Auth()
             obtained_token = auth_instance.token()
             if obtained_token:
-                logging.info(f"{os.path.basename(__file__)}: Token updated successfully: {obtained_token}")
+                logging.info(f"{os.path.basename(__file__)}: Token atualizado com sucesso: {
+                             obtained_token}")
                 self.token = obtained_token
                 self.header = {'Authorization': f'{self.token}'}
             else:
-                logging.warning(f"{os.path.basename(__file__)}: Failed to obtain token.")
+                logging.warning(
+                    f"{os.path.basename(__file__)}: Falha ao obter o token.")
         else:
-            logging.warning(f"{os.path.basename(__file__)}: Token já definido!")
+            logging.warning(
+                f"{os.path.basename(__file__)}: Token já definido!")
+            # Atualiza o header com o novo token
+            self.header = {'Authorization': f'{self.token}'}
 
     def refresh_new_token(self):
         auth_instance = Auth()
         obtained_token = auth_instance.token()
         if obtained_token:
-            logging.info(f"{os.path.basename(__file__)}: Token updated successfully: {obtained_token}")
+            logging.info(f"{os.path.basename(__file__)
+                            }: Token atualizado com sucesso: {obtained_token}")
             self.token = obtained_token
             self.header = {'Authorization': f'{self.token}'}
         else:
-            logging.warning(f"{os.path.basename(__file__)}: Failed to obtain token.")
+            logging.warning(f"{os.path.basename(__file__)
+                               }: Falha ao obter o token.")
 
     def make_api_request(self, url, params):
         try:
@@ -57,11 +69,16 @@ class Listing:
             if response_data != {'erro': 'Token expirado ou não existe'}:
                 return response_data["root"]
             else:
-                logging.warning(f"{os.path.basename(__file__)}: Token expired or not available.")
+                logging.warning(f"{os.path.basename(__file__)
+                                   }: Token expired or not available.")
+                logging.warning(f"{os.path.basename(__file__)}: {
+                                response.json()}")
+                self.refresh_new_token()
                 return None  # Não chame recursivamente aqui
 
         except requests.RequestException as e:
-            logging.error(f"{os.path.basename(__file__)}: Error in API request: {e}")
+            logging.error(f"{os.path.basename(__file__)
+                             }: Error in API request: {e}")
             raise
 
     def get_ticket_list(self):
@@ -112,15 +129,15 @@ class Listing:
         try:
             response_data = self.make_api_request(url, parameters)
 
-            if response_data:
-                logging.info(f"{os.path.basename(__file__)}: Requisition successful")
+            if response_data != None:
+                logging.info(f"{os.path.basename(__file__)
+                                }: Requisition successful")
 
                 # Process the response_data as needed
-                print("Executou a lista!")
                 return response_data
             else:
-                logging.warning(f"{os.path.basename(__file__)}: Failed to obtain ticket list.")
-                self.refresh_new_token()
+                logging.warning(f"{os.path.basename(__file__)
+                                   }: Failed to obtain ticket list.")
                 return None
 
         except requests.HTTPError as http_err:
@@ -130,5 +147,6 @@ class Listing:
                 self.refresh_token()
                 return None  # Retry the API request after token refresh
             else:
-                logging.error(f"{os.path.basename(__file__)}: HTTPError: %s", http_err)
+                logging.error(f"{os.path.basename(__file__)
+                                 }: HTTPError: %s", http_err)
                 raise  # Rethrow the exception after logging

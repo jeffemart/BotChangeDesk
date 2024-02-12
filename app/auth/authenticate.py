@@ -1,7 +1,7 @@
-import os
-import json
-import logging
 import requests
+import logging
+import json
+import os
 
 from datetime import datetime, timedelta
 from dotenv import load_dotenv, set_key
@@ -42,15 +42,18 @@ class Auth:
                 response.raise_for_status()  # Raise an HTTPError for bad responses
 
                 self.__token = response.json()
-                logging.debug(f"{os.path.basename(__file__)}: Token acquisition successful")
-                print(f"{datetime.now().strftime("%H:%M:%S")} - Token acquisition: {self.__token}")
+                logging.debug(f"{os.path.basename(__file__)
+                                 }: Token acquisition successful")
+                print(f"{datetime.now().strftime("%H:%M:%S")
+                         } - Token acquisition: {self.__token}")
 
                 # Save the token in the .env file
                 set_key('./app/.env', 'TOKEN', self.__token)
 
                 return self.__token
         except requests.RequestException as e:
-            logging.warning(f"{os.path.basename(__file__)}: Token acquisition failed. Error: %s", e)
+            logging.warning(f"{os.path.basename(__file__)
+                               }: Token acquisition failed. Error: %s", e)
             return None
 
     def get_token(self):
