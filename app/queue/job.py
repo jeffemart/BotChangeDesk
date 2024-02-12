@@ -1,13 +1,14 @@
-import os
+import threading
+import requests
+import logging
 import json
 import time
-import logging
-import requests
-import threading
+import os
 
 from datetime import datetime, timedelta
 from app.auth.authenticate import Auth
 from app.queue.listing import Listing
+
 
 # Configurar o logger no script listing
 logging.basicConfig(filename='bot.log',
@@ -21,34 +22,10 @@ class JobThread(threading.Thread):
     def __init__(self):
         super().__init__()
         self._stop_event = threading.Event()
-        self.token = os.getenv('TOKEN')
-        self.header = {'Authorization': f'{self.token}'}
-        self.refresh_token()
-
-    def refresh_token(self):
-        if not self.token:  # Atualiza apenas se o token não estiver definido
-            auth_instance = Auth()
-            obtained_token = auth_instance.token()
-            if obtained_token:
-                logging.info(f"{os.path.basename(__file__)}: Obtained token: {obtained_token}")
-                self.token = obtained_token
-                self.header = {'Authorization': f'{self.token}'}
-            else:
-                logging.error(f"{os.path.basename(__file__)}: Failed to obtain token.")
-
-    def refresh_new_token(self):
-        auth_instance = Auth()
-        obtained_token = auth_instance.token()
-        if obtained_token:
-            logging.info(f"{os.path.basename(__file__)}: Token updated successfully: {obtained_token}")
-            self.token = obtained_token
-            self.header = {'Authorization': f'{self.token}'}
-        else:
-            logging.warning(f"{os.path.basename(__file__)}: Failed to obtain token.")
+        self.listing_instance = Listing()
 
     def run(self):
         while not self._stop_event.is_set():
-            # Trecho de código a ser executado
             try:
                 self.process_tickets()
             except Exception as e:
@@ -56,13 +33,24 @@ class JobThread(threading.Thread):
 
             time.sleep(30)  # Tempo de espera entre as iterações
 
+
     def stop(self):
         self._stop_event.set()
 
-    def process_tickets(self):
-        listing_instance = Listing()
+
+    def make_api_request(self, url, params):
         try:
-            get_listing = listing_instance.get_ticket_list()
+            response = requests.post(url, headers=self.header, data=params)
+            response.raise_for_status()
+            return response.json().get("root", [])
+        except requests.RequestException as e:
+            logging.error(f"{os.path.basename(__file__)}: Erro na requisição da API: %s", e)
+            raise
+     
+        
+    def process_tickets(self):
+        try:
+            get_listing = self.listing_instance.get_ticket_list()
             bot_list = get_listing
 
             if bot_list:
@@ -78,14 +66,12 @@ class JobThread(threading.Thread):
             if http_err.response.status_code == 401:
                 logging.warning(
                     f"{os.path.basename(__file__)}: Token expirado. Atualizando token e tentando novamente...")
-                self.refresh_new_token()
             else:
                 logging.error(f"{os.path.basename(__file__)}: HTTPError: %s", http_err)
 
         except Exception as e:
             logging.error(f"{os.path.basename(__file__)}: Erro ao processar tickets: %s", e)
 
-        self.token = os.getenv('TOKEN')
 
     def process_item(self, item):
         logging.info(f"{os.path.basename(__file__)}: Processando item com Assunto: %s", item.get("Assunto"))
@@ -128,29 +114,18 @@ class JobThread(threading.Thread):
 
         logging.info(f"{os.path.basename(__file__)}: Parametros_Interacao")
         try:
-            response = requests.put("https://api.desk.ms/ChamadosSuporte/interagir",
-                                    headers=self.header, json=Parametros_Interacao)
+            response = requests.put("https://api.desk.ms/ChamadosSuporte/interagir", headers={'Authorization': f'{os.getenv('TOKEN')}'}, json=Parametros_Interacao)
             logging.info(f"{os.path.basename(__file__)}: {response}")
             logging.info(f"{os.path.basename(__file__)}: {response.json()}")
 
             if response.json() != {'erro': 'Token expirado ou não existe'}:
                 json_response = response.json()
                 with open('interacao.json', 'w', encoding='utf8') as resultado:
-                    json.dump(json_response, resultado,
-                              indent=4, ensure_ascii=False)
+                    json.dump(json_response, resultado, indent=4, ensure_ascii=False)
                 logging.info(f"{os.path.basename(__file__)}: Interação bem-sucedida")
             else:
-                logging.error(
-                    f"{os.path.basename(__file__)}: Falha na requisição. Código de status: %s", response.json())
+                logging.error(f"{os.path.basename(__file__)}: Falha na requisição. Código de status: %s", response.json())
 
         except requests.RequestException as e:
             logging.error(f"{os.path.basename(__file__)}: Erro na requisição: %s", e)
 
-    def make_api_request(self, url, params):
-        try:
-            response = requests.post(url, headers=self.header, data=params)
-            response.raise_for_status()
-            return response.json().get("root", [])
-        except requests.RequestException as e:
-            logging.error(f"{os.path.basename(__file__)}: Erro na requisição da API: %s", e)
-            raise
